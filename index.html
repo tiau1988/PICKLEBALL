@@ -1,58 +1,89 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>匹克球训练注册</title>
+    <title>匹克球训练注册系统</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
-<body class="bg-gray-100">
-    <div class="container mx-auto p-4">
-        <h1 class="text-3xl font-bold text-center mb-6">匹克球训练注册</h1>
-        <form id="registrationForm" class="bg-white p-6 rounded-lg shadow-md">
-            <div class="mb-4">
-                <label class="block text-gray-700">姓名</label>
-                <input type="text" id="name" class="w-full px-4 py-2 border rounded-lg" required>
-            </div>
-            <div class="mb-4">
-                <label class="block text-gray-700">选择时段</label>
-                <select id="timeSlot" class="w-full px-4 py-2 border rounded-lg" required>
-                    <option value="1pm-3pm">1pm - 3pm</option>
-                    <option value="3pm-5pm">3pm - 5pm</option>
+<body class="bg-gray-100 min-h-screen p-8">
+    <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-6">
+        <h1 class="text-3xl font-bold text-center mb-6 text-blue-600">匹克球训练注册</h1>
+        
+        <!-- 注册表单 -->
+        <form id="registrationForm" class="space-y-4">
+            <!-- 日期选择 -->
+            <div>
+                <label class="block text-gray-700 font-medium mb-2">选择星期日</label>
+                <select id="date" class="w-full p-2 border rounded-lg" required>
+                    <option value="">请选择日期</option>
                 </select>
             </div>
-            <div class="mb-4">
-                <label class="block text-gray-700">朋友姓名（可选）</label>
-                <input type="text" id="friendName" class="w-full px-4 py-2 border rounded-lg">
+
+            <!-- 时段选择 -->
+            <div>
+                <label class="block text-gray-700 font-medium mb-2">选择时段</label>
+                <select id="timeSlot" class="w-full p-2 border rounded-lg" required>
+                    <option value="1pm-3pm">下午 1:00 - 3:00</option>
+                    <option value="3pm-5pm">下午 3:00 - 5:00</option>
+                </select>
             </div>
-            <button type="submit" class="w-full bg-blue-500 text-white py-2 rounded-lg">注册</button>
+
+            <!-- 多人注册 -->
+            <div>
+                <label class="block text-gray-700 font-medium mb-2">
+                    注册姓名（多人用逗号分隔，例如：张三,李四）
+                </label>
+                <input type="text" id="names" class="w-full p-2 border rounded-lg" required>
+            </div>
+
+            <button type="submit" class="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600">
+                提交注册
+            </button>
         </form>
-        <div id="message" class="mt-4 text-center"></div>
+
+        <!-- 提示信息 -->
+        <div id="message" class="mt-4 text-center font-medium"></div>
     </div>
 
     <script>
-        document.getElementById('registrationForm').addEventListener('submit', function(event) {
-            event.preventDefault();
-            const name = document.getElementById('name').value;
-            const timeSlot = document.getElementById('timeSlot').value;
-            const friendName = document.getElementById('friendName').value;
-
-            // 发送数据到后端
-            fetch('https://your-yeahhost-domain.com/register', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ name, timeSlot, friendName }),
-            })
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById('message').textContent = data.message;
-            })
-            .catch(error => {
-                console.error('Error:', error);
+        // 生成4月到6月的所有星期日
+        function generateSundays() {
+            const dates = [];
+            const year = new Date().getFullYear();
+            
+            for (let month = 3; month <= 5; month++) { // 4月=3, 6月=5
+                for (let day = 1; day <= 31; day++) {
+                    const date = new Date(year, month, day);
+                    if (date.getDay() === 0 && date.getMonth() === month) {
+                        dates.push(date.toLocaleDateString('zh-CN'));
+                    }
+                }
+            }
+            
+            const dateSelect = document.getElementById('date');
+            dates.forEach(date => {
+                const option = document.createElement('option');
+                option.value = date;
+                option.textContent = date;
+                dateSelect.appendChild(option);
             });
-        });
-    </script>
-</body>
-</html>
+        }
+
+        // 检查是否满员
+        function checkAvailability(date, timeSlot) {
+            const data = JSON.parse(localStorage.getItem('registrations') || '{}');
+            const key = `${date}|${timeSlot}`;
+            return (data[key]?.length || 0) < 6; // 每个时段最多6人
+        }
+
+        // 表单提交
+        document.getElementById('registrationForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const date = document.getElementById('date').value;
+            const timeSlot = document.getElementById('timeSlot').value;
+            const names = document.getElementById('names').value.split(',').map(name => name.trim());
+            
+            if (!checkAvailability(date, timeSlot)) {
+                document.getElementById('message').textContent = "该时段已满，请选择其他时段！";
